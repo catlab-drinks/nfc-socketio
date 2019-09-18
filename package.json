@@ -9,6 +9,8 @@
   "author": "",
   "license": "ISC",
   "dependencies": {
-    "nfc-pcsc": "^0.7.4"
+    "express": "^4.15.2",
+    "nfc-pcsc": "^0.7.4",
+    "socket.io": "^2.2.0"
   }
 }
