@@ -27,6 +27,12 @@ nfc.on('reader', async reader => {
         console.log();
         console.log(`card detected`, card);
 
+        // red error
+        await reader.led(0b01011101, [0x02, 0x01, 0x05, 0x01]);
+
+        // green success
+        await reader.led(0b00101110, [0x01, 0x00, 0x01, 0x01]);
+
         // example reading 12 bytes assuming containing text in utf8
         try {
 
