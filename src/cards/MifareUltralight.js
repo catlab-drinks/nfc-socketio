@@ -164,7 +164,7 @@ class MifareUltralight {
         // do we have local data?
         if (this.data.length > 0) {
 
-            // only write changed data
+            // only write the changed blocks
             const userData = await this.getUserData();
             const p = userData.length / blockSize;
 
@@ -190,6 +190,7 @@ class MifareUltralight {
             return Promise.all(commands);
         }
 
+        // no data loaded? just write it normally
         await this.reader.write(this.USERDATA_BLOCK_START, buffer);
     }
 
@@ -206,7 +207,7 @@ class MifareUltralight {
         const ndefFormat = NDEFHelper.encapsulate(buffer, 4);
         console.log('writing ' + ndefFormat.length + ' bytes');
 
-        await this.write(this.USERDATA_BLOCK_START, ndefFormat);
+        await this.write(ndefFormat);
     }
 
     isNewCard() {
