@@ -1,8 +1,6 @@
 const { server, io } = require('./server.js');
 
 const { NFC, CONNECT_MODE_DIRECT, KEY_TYPE_A, TAG_ISO_14443_3, TransmitError } = require('nfc-pcsc');
-//const ndef = require('ndef');
-const NdefLibrary = require('ndef-lib');
 const MifareUltralight = require('./cards/MifareUltralight.js');
 
 const nfc = new NFC(); // optionally you can pass logger
@@ -138,7 +136,7 @@ nfc.on('reader', async reader => {
         }
 
         try {
-            currentCard = new MifareUltralight(card, reader);
+            currentCard = new MifareUltralight(card.uid, reader);
 
             // notify the clients
             nfcSocket.emit('nfc:card', { uid: card.uid });

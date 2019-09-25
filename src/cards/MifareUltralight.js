@@ -4,7 +4,7 @@ const NDEFHelper = require('../tools/NDEFHelper');
 
 class MifareUltralight {
 
-    constructor(card, reader) {
+    constructor(uid, reader) {
 
         this.CONFIG_BLOCK_START = 0x29;
         this.USERDATA_BLOCK_START = 0x04;
@@ -14,7 +14,7 @@ class MifareUltralight {
         this.data = [];
         this.password = null;
 
-        this.uid = card.uid;
+        this.uid = uid;
     }
 
     /**
