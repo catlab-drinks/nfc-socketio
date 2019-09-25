@@ -1,6 +1,114 @@
-const { NFC, CONNECT_MODE_DIRECT } = require('nfc-pcsc');
+const { server, io } = require('./server.js');
+
+const { NFC, CONNECT_MODE_DIRECT, KEY_TYPE_A, TAG_ISO_14443_3, TransmitError } = require('nfc-pcsc');
+//const ndef = require('ndef');
+const NdefLibrary = require('ndef-lib');
+const MifareUltralight = require('./cards/MifareUltralight.js');
 
 const nfc = new NFC(); // optionally you can pass logger
+
+let nfcSocket;
+
+let currentCard = null;
+
+io.on('connection', function(socket){
+    console.log('a user connected');
+
+    // join nfc room
+    //socket.join('nfc');
+    nfcSocket = socket;
+
+    nfcSocket.on('nfc:password', async (data, ack) => {
+
+        ack = ack || function() {};
+
+        if (!currentCard || data.uid !== currentCard.uid) {
+            console.log('Current card does not match command card');
+            ack({ error: { code: 400, error: 'Current card does not match command card '}});
+        }
+
+        const password = data.password;
+        console.log('Got password', password);
+
+        try {
+            await currentCard.readUserData();
+
+            // is this card new?
+            if (currentCard.isNewCard()) {
+                console.log('New card found, setting protection');
+                await currentCard.writeProtect(password);
+
+                // also write 0 to the userdata bytes so that the card is not considered 'new' anymore.
+                await currentCard.write(Buffer.allocUnsafe(8).fill(0));
+
+                console.log('Done protecting!');
+            } else {
+                console.log('Existing card found, authenticating');
+                await currentCard.passwordAuthenticate(password, '0000');
+                console.log('Authenticated succesfully');
+            }
+
+            ack({ success: true });
+
+            // ready for content yay!
+            const ndefData = currentCard.getNdefContent();
+            if (ndefData) {
+                nfcSocket.emit('nfc:data', {
+                    uid: currentCard.uid,
+                    ndef: (new Buffer(ndefData)).toString('base64')
+                });
+            } else {
+                nfcSocket.emit('nfc:data', {
+                    uid: currentCard.uid,
+                    data: (new Buffer(currentCard.getUserData())).toString('base64')
+                });
+            }
+
+
+
+        } catch (err) {
+
+            console.error(err);
+            ack({ error: { code: 500, error: err }});
+
+        }
+
+    });
+
+    nfcSocket.on('nfc:write', async (data, ack) => {
+
+        ack = ack || function() {};
+
+        try {
+            if (!currentCard || data.uid !== currentCard.uid) {
+                console.log('Current card does not match command card');
+                ack({error: {status: 400, error: 'Current card does not match command card '}});
+            }
+
+            if (data.ndef) {
+                console.log('ndef data received for writing.');
+                let buffer = new Buffer(data.ndef, 'base64');
+                await currentCard.writeNdef(buffer);
+            } else {
+                console.log('raw data received for writing.');
+                let buffer = new Buffer(data.data, 'base64');
+                await currentCard.write(buffer);
+            }
+            console.log('data written');
+
+            ack({ success: true });
+
+        } catch (err) {
+
+            console.error(err);
+            ack({ error: { code: 500, error: err }});
+
+        }
+
+    });
+
+});
+
 
 nfc.on('reader', async reader => {
 
@@ -12,52 +120,37 @@ nfc.on('reader', async reader => {
         await reader.disconnect();
     } catch (err) {
         console.info(`initial sequence error`, reader, err);
+        await reader.disconnect();
     }
-
-    // enable when you want to auto-process ISO 14443-4 tags (standard=TAG_ISO_14443_4)
-    // when an ISO 14443-4 is detected, SELECT FILE command with the AID is issued
-    // the response is available as card.data in the card event
-    // see examples/basic.js line 17 for more info
-    // reader.aid = 'F222222222';
 
     reader.on('card', async card => {
 
-        console.log(`card detected`, card);
-
-        // example reading 12 bytes assuming containing text in utf8
-        try {
-
-            // reader.read(blockNumber, length, blockSize = 4, packetSize = 16)
-            const data = await reader.read(4, 12); // starts reading in block 4, continues to 5 and 6 in order to read 12 bytes
-            console.log(`data read`, data);
-            const payload = data.toString(); // utf8 is default encoding
-            console.log(`data converted`, payload);
-
-
-
-
-        } catch (err) {
-            console.error(`error when reading data`, err);
+        console.log('Card detected', card);
+        if (!nfcSocket) {
+            return;
         }
 
-        // example write 12 bytes containing text in utf8
+        // MIFARE Classic is ISO/IEC 14443-3 tag
+        // skip other standards
+        if (card.type !== TAG_ISO_14443_3) {
+            console.log('Invalid card detected');
+            return;
+        }
+
         try {
+            currentCard = new MifareUltralight(card, reader);
 
-            const data = Buffer.allocUnsafe(12);
-            data.fill(0);
-            const text = (new Date()).toTimeString();
-            data.write(text); // if text is longer than 12 bytes, it will be cut off
-            // reader.write(blockNumber, data, blockSize = 4)
-            await reader.write(4, data); // starts writing in block 4, continues to 5 and 6 in order to write 12 bytes
-            console.log(`data written`);
+            // notify the clients
+            nfcSocket.emit('nfc:card', { uid: card.uid });
 
-        } catch (err) {
-            console.error(`error when writing data`, err);
+        } catch (e) {
+            console.error(e);
         }
 
     });
 
     reader.on('card.off', card => {
+        currentCard = null;
         console.log(`${reader.reader.name}  card removed`, card);
     });
 
