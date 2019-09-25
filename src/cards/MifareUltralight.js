@@ -160,9 +160,10 @@ class MifareUltralight {
     async write(buffer) {
 
         const blockSize = this.BLOCKSIZE;
+        const optimizeWrites = false;
 
         // do we have local data?
-        if (this.data.length > 0) {
+        if (optimizeWrites && this.data.length > 0) {
 
             // only write the changed blocks
             const userData = await this.getUserData();
@@ -187,6 +188,7 @@ class MifareUltralight {
                 }
             }
 
+            console.log('Writing ' + commands.length + ' blocks');
             return Promise.all(commands);
         }
 
