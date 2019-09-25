@@ -49,7 +49,7 @@ io.on('connection', function(socket){
             ack({ success: true });
 
             // ready for content yay!
-            const ndefData = currentCard.getNdefContent();
+            const ndefData = await currentCard.getNdefContent();
             if (ndefData) {
                 nfcSocket.emit('nfc:data', {
                     uid: currentCard.uid,

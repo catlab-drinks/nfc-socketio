@@ -224,8 +224,8 @@ class MifareUltralight {
         return true;
     }
 
-    getNdefContent() {
-        const userData = this.getUserData();
+    async getNdefContent() {
+        const userData = await this.getUserData();
         if (NDEFHelper.isNdef(userData)) {
             return NDEFHelper.clean(userData);
         }
