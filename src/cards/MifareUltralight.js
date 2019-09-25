@@ -179,10 +179,7 @@ class MifareUltralight {
 
                 // console.log(i, block, start, end, part);
 
-                const isDifferent = this.isDifferent(
-                    userData.slice(i * blockSize, (i + 1) * blockSize),
-                    part
-                );
+                const isDifferent = this.isDifferent(userData.slice(start, end), part);
                 console.log('Block ' + block + ' is ' + (isDifferent ? 'different' : 'the same'));
 
                 if (isDifferent) {
@@ -198,12 +195,16 @@ class MifareUltralight {
     }
 
     isDifferent(existing, replacement) {
+        if (existing.length !== replacement.length) {
+            return true;
+        }
+
         for (let i = 0; i < replacement.length; i ++) {
             if (existing[i] !== replacement[i]) {
-                return false;
+                return true;
             }
         }
-        return true;
+        return false;
     }
 
     async writeNdef(buffer) {
