@@ -166,7 +166,7 @@ class MifareUltralight {
 
             // only write the changed blocks
             const userData = await this.getUserData();
-            const p = userData.length / blockSize;
+            const p = buffer.length / blockSize;
 
             const commands = [];
             for (let i = 0; i < p; i++) {
