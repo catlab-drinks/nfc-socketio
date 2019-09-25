@@ -180,7 +180,7 @@ class MifareUltralight {
                 // console.log(i, block, start, end, part);
 
                 const isDifferent = this.isDifferent(userData.slice(start, end), part);
-                console.log('Block ' + block + ' is ' + (isDifferent ? 'different' : 'the same'));
+                //console.log('Block ' + block + ' is ' + (isDifferent ? 'different' : 'the same'));
 
                 if (isDifferent) {
                     commands.push(this.reader.write(block, part, blockSize));
