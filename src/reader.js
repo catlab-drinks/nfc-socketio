@@ -140,7 +140,7 @@ nfc.on('reader', async reader => {
             currentCard = new MifareUltralight(card.uid, reader);
 
             // notify the clients
-            nfcSocket.emit('nfc:card', { uid: card.uid });
+            nfcSocket.emit('nfc:card:connect', { uid: card.uid });
 
         } catch (e) {
             console.error(e);
@@ -149,6 +149,8 @@ nfc.on('reader', async reader => {
     });
 
     reader.on('card.off', card => {
+        nfcSocket.emit('nfc:card:disconnect', { uid: card.uid });
+
         currentCard = null;
         console.log(`${reader.reader.name}  card removed`, card);
     });
