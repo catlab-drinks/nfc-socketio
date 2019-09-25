@@ -160,7 +160,7 @@ class MifareUltralight {
     async write(buffer) {
 
         const blockSize = this.BLOCKSIZE;
-        const optimizeWrites = false;
+        const optimizeWrites = true;
 
         // do we have local data?
         if (optimizeWrites && this.data.length > 0) {
