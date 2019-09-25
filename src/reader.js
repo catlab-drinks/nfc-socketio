@@ -29,7 +29,7 @@ io.on('connection', function(socket){
         console.log('Got password', password);
 
         try {
-            await currentCard.readUserData();
+            await currentCard.getUserData();
 
             // is this card new?
             if (currentCard.isNewCard()) {
@@ -56,9 +56,10 @@ io.on('connection', function(socket){
                     ndef: (new Buffer(ndefData)).toString('base64')
                 });
             } else {
+                const userData = await currentCard.getUserData();
                 nfcSocket.emit('nfc:data', {
                     uid: currentCard.uid,
-                    data: (new Buffer(currentCard.getUserData())).toString('base64')
+                    data: (new Buffer(userData)).toString('base64')
                 });
             }
 

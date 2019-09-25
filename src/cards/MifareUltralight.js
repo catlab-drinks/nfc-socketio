@@ -9,6 +9,7 @@ class MifareUltralight {
         this.CONFIG_BLOCK_START = 0x29;
         this.USERDATA_BLOCK_START = 0x04;
         this.USERDATA_BLOCK_END = 0x27;
+        this.BLOCKSIZE = 4;
 
         this.reader = reader;
         this.data = [];
@@ -76,9 +77,6 @@ class MifareUltralight {
         if (!response.slice(3, 5).equals(pack)) {
             throw new MifareUltralightPasswordAuthenticationError('pack_mismatch', `Pack mismatch.`)
         }
-
-        return;
-
     }
 
     // FAST_READ
@@ -143,20 +141,72 @@ class MifareUltralight {
         await this.reader.write(this.CONFIG_BLOCK_START, config);
     }
 
-    async readUserData() {
-        this.data = await this.fastRead(this.USERDATA_BLOCK_START, this.USERDATA_BLOCK_END);
+    /**
+     * @returns {Promise<[]|Array>}
+     */
+    async getUserData() {
+        if (this.data.length === 0) {
+            this.data = await this.fastRead(this.USERDATA_BLOCK_START, this.USERDATA_BLOCK_END);
+        }
         return this.data;
     }
 
+    /**
+     * Write data to the chip.
+     * If data was loaded before, only write blocks that have changed.
+     * @param buffer
+     * @returns {Promise<void>}
+     */
     async write(buffer) {
+
+        const blockSize = this.BLOCKSIZE;
+
+        // do we have local data?
+        if (this.data.length > 0) {
+
+            // only write changed data
+            const userData = await this.getUserData();
+            const p = userData.length / blockSize;
+
+            const commands = [];
+            for (let i = 0; i < p; i++) {
+                const block = this.USERDATA_BLOCK_START + i;
+
+                const start = i * blockSize;
+                const end = (i + 1) * blockSize;
+
+                const part = buffer.slice(start, end);
+
+                // console.log(i, block, start, end, part);
+
+                const isDifferent = this.isDifferent(userData.slice(i * blockSize, (i + 1) * blockSize));
+                console.log('Block ' + block + ' is ' + (isDifferent ? 'different' : 'the same'));
+
+                if (isDifferent) {
+                    commands.push(this.reader.write(block, part, blockSize));
+                }
+            }
+
+            return Promise.all(commands);
+        }
+
         await this.reader.write(this.USERDATA_BLOCK_START, buffer);
+    }
+
+    isDifferent(existing, replacement) {
+        for (let i = 0; i < replacement.length; i ++) {
+            if (existing[i] !== replacement[i]) {
+                return false;
+            }
+        }
+        return true;
     }
 
     async writeNdef(buffer) {
         const ndefFormat = NDEFHelper.encapsulate(buffer, 4);
         console.log('writing ' + ndefFormat.length + ' bytes');
 
-        await this.reader.write(this.USERDATA_BLOCK_START, ndefFormat);
+        await this.write(this.USERDATA_BLOCK_START, ndefFormat);
     }
 
     isNewCard() {
@@ -169,13 +219,8 @@ class MifareUltralight {
         return true;
     }
 
-    getUserData() {
-        return this.data;
-    }
-
     getNdefContent() {
         const userData = this.getUserData();
-        console.log(userData);
         if (NDEFHelper.isNdef(userData)) {
             return NDEFHelper.clean(userData);
         }
