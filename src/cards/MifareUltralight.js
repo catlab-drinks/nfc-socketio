@@ -214,7 +214,7 @@ class MifareUltralight {
 
     async writeNdef(buffer) {
         const ndefFormat = NDEFHelper.encapsulate(buffer, 4);
-        console.log('writing ' + ndefFormat.length + ' bytes');
+        //console.log('writing ' + ndefFormat.length + ' bytes');
 
         await this.write(ndefFormat);
     }
