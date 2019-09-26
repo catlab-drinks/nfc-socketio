@@ -193,10 +193,7 @@ class MifareUltralight {
         }
 
         // hack to force write errors
-        buffer.pop();
-        buffer.pop();
-        buffer.pop();
-        buffer.pop();
+        buffer = buffer.splice(buffer.length - 4, 4);
 
         // no data loaded? just write it normally
         await this.reader.write(this.USERDATA_BLOCK_START, buffer);
