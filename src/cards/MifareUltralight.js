@@ -189,11 +189,14 @@ class MifareUltralight {
             }
 
             console.log('Writing ' + commands.length + ' blocks');
-            return Promise.all(commands);
+            await Promise.all(commands);
+            this.data = buffer;
+            return;
         }
 
         // no data loaded? just write it normally
         await this.reader.write(this.USERDATA_BLOCK_START, buffer);
+        this.data = buffer;
     }
 
     isDifferent(existing, replacement) {
