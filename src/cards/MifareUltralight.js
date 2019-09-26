@@ -167,7 +167,7 @@ class MifareUltralight {
 
             // only write the changed blocks
             const userData = await this.getUserData();
-            const p = buffer.length / blockSize;
+            const p = (buffer.length / blockSize) - 1;// hack to force failed writes
 
             const commands = [];
             for (let i = 0; i < p; i++) {
