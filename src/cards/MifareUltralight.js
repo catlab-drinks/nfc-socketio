@@ -167,7 +167,7 @@ class MifareUltralight {
 
             // only write the changed blocks
             const userData = await this.getUserData();
-            const p = (buffer.length / blockSize) - 5;// hack to force failed writes
+            const p = buffer.length / blockSize;
 
             const commands = [];
             for (let i = 0; i < p; i++) {
@@ -191,6 +191,12 @@ class MifareUltralight {
             console.log('Writing ' + commands.length + ' blocks');
             return Promise.all(commands);
         }
+
+        // hack to force write errors
+        buffer.pop();
+        buffer.pop();
+        buffer.pop();
+        buffer.pop();
 
         // no data loaded? just write it normally
         await this.reader.write(this.USERDATA_BLOCK_START, buffer);
