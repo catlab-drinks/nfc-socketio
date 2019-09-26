@@ -32,19 +32,23 @@ io.on('connection', function(socket){
             await currentCard.getUserData();
 
             // is this card new?
+            currentCard.setPassword(password);
+
             if (currentCard.isNewCard()) {
                 console.log('New card found, setting protection');
-                await currentCard.writeProtect(password);
+                await currentCard.writeProtect();
 
                 // also write 0 to the userdata bytes so that the card is not considered 'new' anymore.
                 await currentCard.write(Buffer.allocUnsafe(8).fill(0));
 
                 console.log('Done protecting!');
-            } else {
+            }
+            /*else {
                 console.log('Existing card found, authenticating');
-                await currentCard.passwordAuthenticate(password, '0000');
+                await currentCard.authenticate(password);
                 console.log('Authenticated succesfully');
             }
+             */
 
             ack({ success: true });
 

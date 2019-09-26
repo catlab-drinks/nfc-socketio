@@ -109,8 +109,12 @@ class MifareUltralight {
 
     }
 
-    async writeProtect(password) {
-        password = NDEFHelper.parseBytes('Password', password, 4);
+    async authenticate() {
+        await this.passwordAuthenticate(this.password, '0000');
+    }
+
+    async writeProtect() {
+        const password = NDEFHelper.parseBytes('Password', this.password, 4);
 
         // set password
         await this.reader.write(this.CONFIG_BLOCK_START + 2, password);
@@ -158,6 +162,8 @@ class MifareUltralight {
      * @returns {Promise<void>}
      */
     async write(buffer) {
+
+        await this.authenticate();
 
         const blockSize = this.BLOCKSIZE;
         const optimizeWrites = true;
