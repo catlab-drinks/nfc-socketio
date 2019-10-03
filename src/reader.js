@@ -14,99 +14,112 @@ io.on('connection', function(socket){
 
     // join nfc room
     //socket.join('nfc');
-    nfcSocket = socket;
-
-    nfcSocket.on('nfc:password', async (data, ack) => {
+    socket.on('hello', (data, ack) => {
 
         ack = ack || function() {};
 
-        if (!currentCard || data.uid !== currentCard.uid) {
-            console.log('Current card does not match command card');
-            ack({ error: { code: 400, error: 'Current card does not match command card '}});
+        // check if the password is correct
+        if (typeof(data.password) === 'undefined' || data.password !== process.env.NFC_PASSWORD) {
+            ack({ error: { message: 'Password is wrong.' }});
+            return;
         }
 
-        const password = data.password;
-        console.log('Got password', password);
+        nfcSocket = socket;
+        ack({ success: true });
 
-        try {
-            await currentCard.getUserData();
+        nfcSocket.on('nfc:password', async (data, ack) => {
 
-            // is this card new?
-            currentCard.setPassword(password);
+            ack = ack || function() {};
 
-            if (currentCard.isNewCard()) {
-                console.log('New card found, setting protection');
-                await currentCard.writeProtect();
-
-                // also write 0 to the userdata bytes so that the card is not considered 'new' anymore.
-                await currentCard.write(Buffer.allocUnsafe(8).fill(0));
-
-                console.log('Done protecting!');
-            }
-            /*else {
-                console.log('Existing card found, authenticating');
-                await currentCard.authenticate(password);
-                console.log('Authenticated succesfully');
-            }
-             */
-
-            ack({ success: true });
-
-            // ready for content yay!
-            const ndefData = await currentCard.getNdefContent();
-            if (ndefData) {
-                nfcSocket.emit('nfc:data', {
-                    uid: currentCard.uid,
-                    ndef: (new Buffer(ndefData)).toString('base64')
-                });
-            } else {
-                const userData = await currentCard.getUserData();
-                nfcSocket.emit('nfc:data', {
-                    uid: currentCard.uid,
-                    data: (new Buffer(userData)).toString('base64')
-                });
-            }
-
-
-
-        } catch (err) {
-
-            console.error(err);
-            ack({ error: { code: 500, error: err }});
-
-        }
-
-    });
-
-    nfcSocket.on('nfc:write', async (data, ack) => {
-
-        ack = ack || function() {};
-
-        try {
             if (!currentCard || data.uid !== currentCard.uid) {
                 console.log('Current card does not match command card');
-                ack({error: {status: 400, error: 'Current card does not match command card '}});
+                ack({ error: { code: 400, error: 'Current card does not match command card '}});
             }
 
-            if (data.ndef) {
-                console.log('ndef data received for writing.');
-                let buffer = new Buffer(data.ndef, 'base64');
-                await currentCard.writeNdef(buffer);
-            } else {
-                console.log('raw data received for writing.');
-                let buffer = new Buffer(data.data, 'base64');
-                await currentCard.write(buffer);
+            const password = data.password;
+            console.log('Got password', password);
+
+            try {
+                await currentCard.getUserData();
+
+                // is this card new?
+                currentCard.setPassword(password);
+
+                if (currentCard.isNewCard()) {
+                    console.log('New card found, setting protection');
+                    await currentCard.writeProtect();
+
+                    // also write 0 to the userdata bytes so that the card is not considered 'new' anymore.
+                    await currentCard.write(Buffer.allocUnsafe(8).fill(0));
+
+                    console.log('Done protecting!');
+                }
+                /*else {
+                    console.log('Existing card found, authenticating');
+                    await currentCard.authenticate(password);
+                    console.log('Authenticated succesfully');
+                }
+                 */
+
+                ack({ success: true });
+
+                // ready for content yay!
+                const ndefData = await currentCard.getNdefContent();
+                if (ndefData) {
+                    nfcSocket.emit('nfc:data', {
+                        uid: currentCard.uid,
+                        ndef: (new Buffer(ndefData)).toString('base64')
+                    });
+                } else {
+                    const userData = await currentCard.getUserData();
+                    nfcSocket.emit('nfc:data', {
+                        uid: currentCard.uid,
+                        data: (new Buffer(userData)).toString('base64')
+                    });
+                }
+
+
+
+            } catch (err) {
+
+                console.error(err);
+                ack({ error: { code: 500, error: err }});
+
             }
-            console.log('data written');
 
-            ack({ success: true });
+        });
 
-        } catch (err) {
+        nfcSocket.on('nfc:write', async (data, ack) => {
 
-            console.error(err);
-            ack({ error: { code: 500, error: err }});
+            ack = ack || function() {};
 
-        }
+            try {
+                if (!currentCard || data.uid !== currentCard.uid) {
+                    console.log('Current card does not match command card');
+                    ack({error: {status: 400, error: 'Current card does not match command card '}});
+                }
+
+                if (data.ndef) {
+                    console.log('ndef data received for writing.');
+                    let buffer = new Buffer(data.ndef, 'base64');
+                    await currentCard.writeNdef(buffer);
+                } else {
+                    console.log('raw data received for writing.');
+                    let buffer = new Buffer(data.data, 'base64');
+                    await currentCard.write(buffer);
+                }
+                console.log('data written');
+
+                ack({ success: true });
+
+            } catch (err) {
+
+                console.error(err);
+                ack({ error: { code: 500, error: err }});
+
+            }
+
+        });
 
     });
 
