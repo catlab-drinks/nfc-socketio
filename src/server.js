@@ -10,7 +10,7 @@ app.get('/', function(req, res){
 
 // also listen for https?
 var http;
-if (process.env.SSL_CERTIFICATE) {
+if (process.env.SSL_CERTIFICATE && fs.existsSync(process.env.SSL_PRIVATE_KEY)) {
 
     var sslOptions = {};
     var ctx;

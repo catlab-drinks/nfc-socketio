@@ -1,5 +1,7 @@
 const { server, io } = require('./server.js');
 
+const { Config } = require('./config');
+
 const { NFC, CONNECT_MODE_DIRECT, KEY_TYPE_A, TAG_ISO_14443_3, TransmitError } = require('nfc-pcsc');
 const MifareUltralight = require('./cards/MifareUltralight.js');
 
@@ -8,6 +10,8 @@ const nfc = new NFC(); // optionally you can pass logger
 let nfcSocket;
 
 let currentCard = null;
+
+console.log('Password: ', Config.password);
 
 io.on('connection', function(socket){
     console.log('a user connected');
@@ -19,7 +23,7 @@ io.on('connection', function(socket){
         ack = ack || function() {};
 
         // check if the password is correct
-        if (typeof(data.password) === 'undefined' || data.password !== process.env.NFC_PASSWORD) {
+        if (typeof(data.password) === 'undefined' || data.password !== Config.password) {
             ack({ error: { message: 'Password is wrong.' }});
             return;
         }
